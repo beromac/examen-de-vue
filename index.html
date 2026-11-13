@@ -88,10 +88,14 @@ const rxv=(p,e)=>({s:N(`${p}.${e}s`),c:N(`${p}.${e}c`)||0,a:N(`${p}.${e}a`),d:N(
 const nv=x=>x&&!isNaN(x.s);
 const CFX={p:'a',dem:'cc.dem',fin:e=>{const x=rxv('cc',e);return nv(x)?x:rxv('sc',e)},prev:e=>rxv('ord',e)};
 const CFL={p:'ka',cl:1,dem:'kf.dem',fin:e=>rxv('kr',e),prev:e=>rxv('ko',e)};
-const lppHits=c=>{const P=E.map(e=>({n:c.fin(e),o:c.prev(e)}));if(!P.every(x=>nv(x.n)&&nv(x.o)))return null;const h=[],dS=x=>Math.abs(x.n.s-x.o.s),dC=x=>Math.abs(x.n.c-x.o.c),z=v=>isNaN(v)?0:v;
-if(P.some(x=>dS(x)>=.5||dC(x)>=.5)||P.every(x=>dS(x)>=.25||dC(x)>=.25))h.push("variation de sphère ou de cylindre");
-if(P.some(x=>z(x.n.d)||z(x.o.d))){if(!P.some(x=>dS(x)>0||dC(x)>0)){const dd=x=>Math.abs(z(x.n.d)-z(x.o.d));if(P.some(x=>dd(x)>=.5)||P.every(x=>dd(x)>=.25))h.push("variation de l'addition")}else if(P.some(x=>dS(x)+Math.abs((x.n.s+z(x.n.d))-(x.o.s+z(x.o.d)))>=.5))h.push("somme des variations de loin et de près")}
-P.forEach((x,i)=>{const cy=Math.abs(x.n.c);if(cy&&!isNaN(x.n.a)&&!isNaN(x.o.a)){let d=Math.abs(x.n.a-x.o.a)%180;d=Math.min(d,180-d);if(d>(cy<=1?20:cy<=4?10:5))h.push(`variation de l'axe ${U(E[i])} (${d}°)`)}});return h};
+const lppHits=c=>{const P=E.map(e=>({n:c.fin(e),o:c.prev(e)}));if(!P.every(x=>nv(x.n)&&nv(x.o)))return null;const h=[],nt=[],T=1e-9,L=['OD','OG'],f=v=>v.toFixed(2).replace('.',','),dS=x=>Math.abs(x.n.s-x.o.s),dC=x=>Math.abs(x.n.c-x.o.c),ok=v=>!isNaN(v);
+const v1=P.map(x=>Math.max(dS(x),dC(x))),det=a=>L.map((l,i)=>`${l} ${f(a[i])}`).join(' ; ');
+if(v1.some(v=>v>=.5-T))h.push(`variation de sphère ou de cylindre d'au moins 0,50 D sur un verre (${det(v1)})`);
+else if(v1.every(v=>v>=.25-T))h.push(`variation de sphère ou de cylindre d'au moins 0,25 D sur chacun des deux verres (${det(v1)})`);
+if(P.some(x=>(ok(x.n.d)&&x.n.d!==0)||(ok(x.o.d)&&x.o.d!==0))){if(!P.every(x=>ok(x.n.d)&&ok(x.o.d)))nt.push("Addition non renseignée (ordonnance ou nouvelle correction, pour un œil) : critères d'addition non évalués.");else{const dist=P.some(x=>dS(x)>T||dC(x)>T),da=P.map(x=>Math.abs(x.n.d-x.o.d));
+if(!dist){if(da.some(v=>v>=.5-T))h.push(`variation de l'addition d'au moins 0,50 D sur un verre (${det(da)})`);else if(da.every(v=>v>=.25-T))h.push(`variation de l'addition d'au moins 0,25 D sur chacun des deux verres (${det(da)})`)}
+else{const sm=P.map((x,i)=>dS(x)+da[i]),sn=P.map((x,i)=>dS(x)+Math.abs((x.n.s+x.n.d)-(x.o.s+x.o.d)));if(sm.some(v=>v>=.5-T))h.push(`somme des variations de loin (sphère) et de près (addition) d'au moins 0,50 D (${det(sm)})`);else if(sn.some(v=>v>=.5-T))nt.push("Cas limite non retenu : la somme loin + près n'atteint 0,50 D que si l'on compte la puissance de près (sphère + addition). Le texte est ambigu : à valider auprès de la CPAM.")}}}
+P.forEach((x,i)=>{const cy=Math.abs(x.n.c);if(cy&&ok(x.n.a)&&ok(x.o.a)){let d=Math.abs(x.n.a-x.o.a)%180;d=Math.min(d,180-d);const th=cy<=1?20:cy<=4?10:5;if(d>th)h.push(`variation de l'axe ${L[i]} de ${d}° (seuil : plus de ${th}°)`)}});return{h,nt}};
 const lg=c=>{let Zn='top';const r=[],A=(t,m)=>r.push([t,m,Zn]),P=c.p,dob=V('a.dob'),dt=V('a.date')||today(),od=V(P+'.ord'),an=age();
 const prim=(V(P+'.prim')||'').startsWith('Premi'),opp=has(P+'.opp',OPP);
 if(!dob)A('in',"Renseigner la date de naissance pour le contrôle réglementaire.");
@@ -109,14 +113,14 @@ if(!V('a.eqp'))A('wa',"Prise en charge : date de délivrance du dernier équipem
 if(an<16){y>=1?A('ok',"Moins de 16 ans : délai de prise en charge d'1 an atteint."):A('wa',"Moins de 16 ans, moins d'1 an depuis le dernier équipement : renouvellement remboursé seulement si dégradation objectivée par un ophtalmologiste sur une prescription médicale.")}
 else if(y>=2)A('ok',"Prise en charge : 2 ans écoulés, renouvellement remboursable.");
 else if(y<1)A('al',`Prise en charge : moins d'1 an depuis le ${rf}, renouvellement non remboursable (arrêté du 3/12/2018, VIII.1 et VIII.2).`);
-else{Zn='cc';const h=lppHits(c);if(td=='RI ')A('al',"Prise en charge : entre 1 et 2 ans avec correction inchangée, renouvellement anticipé non remboursable (VIII.2 exige une dégradation).");
-else if(h===null)A('in',"Entre 1 et 2 ans : renseigner l'ordonnance et la correction finale pour évaluer le renouvellement anticipé (VIII.2).");
-else A(h.length?'ok':'al',h.length?`Renouvellement anticipé autorisé (VIII.2) : ${h.join(' ; ')}.`:"Prise en charge : entre 1 et 2 ans, la variation ne remplit aucun critère de l'arrêté du 3/12/2018 (VIII.2) : renouvellement anticipé refusé.")}
+else{Zn='cc';const r2=td=='RI '?null:lppHits(c);if(td=='RI ')A('al',"Prise en charge : entre 1 et 2 ans avec correction inchangée, renouvellement anticipé non remboursable (VIII.2 exige une dégradation).");
+else if(r2===null)A('in',"Entre 1 et 2 ans : renseigner l'ordonnance et la correction finale pour évaluer le renouvellement anticipé (VIII.2).");
+else{A(r2.h.length?'ok':'al',r2.h.length?`Renouvellement anticipé autorisé (VIII.2) : ${r2.h.join(' ; ')}.`:"Prise en charge : entre 1 et 2 ans, aucun critère de l'arrêté du 3/12/2018 (VIII.2) n'est rempli : renouvellement anticipé refusé.");r2.nt.forEach(m=>A('in',m))}}
 Zn='eqp';if(sit.length&&y<2)A('in',"Situation médicale particulière : aucun délai minimal de prise en charge, sous réserve d'une nouvelle prescription ophtalmologique mentionnant le cas.")}
-Zn='cc';const t=(V(c.dem)||'').slice(0,3);
+Zn='cc';const lppNo=r.some(x=>x[0]=='al'&&x[1].startsWith('Prise en charge'));const t=(V(c.dem)||'').slice(0,3);
 if(!t)A('in',"Choisir le type de demande (RI, RA, POM, orientation) pour obtenir le verdict.");
-else if(t=='RI '){valid===false?A('al',"RI impossible : ordonnance non valide."):A('ok',"RI possible : délivrance à l'identique de l'ordonnance en cours de validité.")}
-else if(t=='RA '){if(valid===false||opp)A('al',"RA NON autorisé au regard de la réglementation (ordonnance non valide ou opposition du prescripteur).");else if(!fin)A('in',"Renseigner la correction finale pour évaluer le RA.");else if(prim)A('wa',"RA conditionné à l'accord écrit du prescripteur (première délivrance).");else if(hits.length)A('wa',"RA possible en droit mais à risque : des critères indicatifs sont atteints.");else A('ok',"RA autorisé au regard des règles d'adaptation (ordonnance valide, pas d'opposition, examen de réfraction réalisé, aucun critère indicatif atteint). La prise en charge se juge séparément (messages ci-dessus).")}
+else if(t=='RI '){valid===false?A('al',"RI impossible : ordonnance non valide."):lppNo?A('wa',"RI possible en droit (ordonnance valide) mais équipement non remboursable avant 2 ans."):A('ok',"RI possible : délivrance à l'identique de l'ordonnance en cours de validité.")}
+else if(t=='RA '){if(valid===false||opp)A('al',"RA NON autorisé au regard de la réglementation (ordonnance non valide ou opposition du prescripteur).");else if(!fin)A('in',"Renseigner la correction finale pour évaluer le RA.");else if(prim)A('wa',"RA conditionné à l'accord écrit du prescripteur (première délivrance).");else if(hits.length)A('wa',"RA possible en droit mais à risque : des critères indicatifs sont atteints.");else if(lppNo)A('wa',"RA possible au regard des règles d'adaptation, mais équipement non remboursable avant 2 ans (critères du renouvellement anticipé non remplis).");else A('ok',"RA autorisé au regard des règles d'adaptation (ordonnance valide, pas d'opposition, examen de réfraction réalisé, aucun critère indicatif atteint). La prise en charge se juge séparément (messages ci-dessus).")}
 else if(t=='POM')A('in',"POM : transmettre ce compte rendu au prescripteur pour demander l'accord ou une ordonnance modifiée.");
 else A('in',"Orientation vers l'ophtalmologiste : transmettre le compte rendu.");
 return r};
